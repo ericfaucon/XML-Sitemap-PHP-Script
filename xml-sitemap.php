@@ -1,73 +1,63 @@
 <?php
-
-/**
- * XML Sitemap PHP Script
- * For more info, see: http://yoast.com/xml-sitemap-php-script/
- * Copyright (C), 2011 - 2012 - Joost de Valk, joost@yoast.com
+/************************************************************************/
+/*              		 CONFIGURATION          		*/
+/************************************************************************/
+/*
+ * The directory to check.
+ * Make sure the DIR ends ups in the Sitemap Dir URL below, otherwise the links to files will be broken!
  */
+$path = '.';
+// The URL corresponding to the directory above
+$url = "http://www.my-website.com";
+// Files type to be included in the sitemap
+$includedExt = array('js', 'html', 'php');
+// Files type to be excluded from the sitemap
+$excludedFiles = array();
+// The Change Frequency for files, should probably not be 'never', unless you know for sure you'll never change them again.
+$chfreq = 'never';
+// The Priority Frequency for files. There's no way to differentiate so it might just as well be 1.
+$prio = 1;
+// The XSL file used for styling the sitemap output, make sure this path is relative to the root of the site.
+$xsl = 'xml-sitemap.xsl';
 
-require './config.php';
 
-// Get the keys so we can check quickly
-$replace_files = array_keys( $replace );
-
-// Sent the correct header so browsers display properly, with or without XSL.
-header( 'Content-Type: application/xml' );
-
-echo '<?xml version="1.0" encoding="utf-8"?>' . "\n";
-
-$ignore = array_merge( $ignore, array( '.', '..', 'config.php', 'xml-sitemap.php' ) );
-
-if ( isset( $xsl ) && !empty( $xsl ) )
-	echo '<?xml-stylesheet type="text/xsl" href="' . SITEMAP_DIR_URL . $xsl . '"?>' . "\n";
-
-function parse_dir( $dir, $url ) {
-	global $ignore, $filetypes, $replace, $chfreq, $prio;
-
-	$handle = opendir( $dir );
-	while ( false !== ( $file = readdir( $handle ) ) ) {
-
-		// Check if this file needs to be ignored, if so, skip it.
-		if ( in_array( utf8_encode( $file ), $ignore ) )
-			continue;
-
-		if ( is_dir( $file ) ) {
-			if ( defined( 'RECURSIVE' ) && RECURSIVE )
-				parse_dir( $file, $url . $file . '/' );
-		}
-
-		// Check whether the file has on of the extensions allowed for this XML sitemap
-		$fileinfo = pathinfo( $dir . $file );
-		if ( in_array( $fileinfo['extension'], $filetypes ) ) {
-
-			// Create a W3C valid date for use in the XML sitemap based on the file modification time
-			if (filemtime( $dir .'/'. $file )==FALSE) {
-				$mod = date( 'c', filectime( $dir . $file ) );
-			} else {
-				$mod = date( 'c', filemtime( $dir . $file ) );
-			}
-
-			// Replace the file with it's replacement from the settings, if needed.
-			if ( in_array( $file, $replace ) )
-				$file = $replace[$file];
-
-			// Start creating the output
-	?>
-
-    <url>
-        <loc><?php echo $url . rawurlencode( $file ); ?></loc>
-        <lastmod><?php echo $mod; ?></lastmod>
-        <changefreq><?php echo $chfreq; ?></changefreq>
-        <priority><?php echo $prio; ?></priority>
-    </url><?php
-		}
-	}
-	closedir( $handle );
+// Send the correct header so browsers display properly, with or without XSL.
+header('Content-Type: application/xml');
+echo '<?xml version="1.0" encoding="utf-8"?>'."\n";
+if (isset($xsl) && !empty($xsl)) {
+	echo '<?xml-stylesheet type="text/xsl" href="'.$url.'/'.$xsl.'"?>'."\n";
 }
+echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
 
-?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><?php
-	parse_dir( SITEMAP_DIR, SITEMAP_DIR_URL );
-?>
+/* 
+ * Pre-load
+ */
+$currFile = substr(strrchr(__FILE__ , '\\'), 1);
+$excludedFiles = array_merge($excludedFiles, array('.', '..', $currFile));    
+$realPath = realpath($path);
+$dirList = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($realPath), RecursiveIteratorIterator::SELF_FIRST);
 
-</urlset>
+foreach($dirList as $file){
+    if (!$file->isDir()) {
+        if (in_array($file->getExtension(), $includedExt)) {
+            if (!in_array($file->getFilename(), $excludedFiles)) {
+                //var_dump($file);
+                $relativePath = str_replace($realPath, "", $file->getPathName());
+                $modifiedDate = date( 'c', $file->getMTime());
+                $urlFile = str_replace($file->getFilename(), rawurlencode($file->getFilename()), $relativePath);
+                $urlFile = $url . str_replace('\\', '/', $urlFile);
+                $xmlCode = "            
+                    <url>
+                        <loc>$urlFile</loc>
+                        <lastmod>$modifiedDate</lastmod>
+                        <changefreq>$chfreq</changefreq>
+                        <priority>$prio</priority>
+                    </url>
+                ";
+                printf($xmlCode);
+            }
+        }
+    }
+}
+echo "</urlset>";
+?>
