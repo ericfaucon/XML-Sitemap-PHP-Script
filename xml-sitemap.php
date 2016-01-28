@@ -46,15 +46,14 @@ foreach($dirList as $file){
                 $modifiedDate = date( 'c', $file->getMTime());
                 $urlFile = str_replace($file->getFilename(), rawurlencode($file->getFilename()), $relativePath);
                 $urlFile = $url . str_replace('\\', '/', $urlFile);
-                $xmlCode = "            
-                    <url>
-                        <loc>$urlFile</loc>
-                        <lastmod>$modifiedDate</lastmod>
-                        <changefreq>$chfreq</changefreq>
-                        <priority>$prio</priority>
-                    </url>
+                echo "            
+    <url>
+        <loc>$urlFile</loc>
+        <lastmod>$modifiedDate</lastmod>
+        <changefreq>$chfreq</changefreq>
+        <priority>$prio</priority>
+    </url>
                 ";
-                printf($xmlCode);
             }
         }
     }
